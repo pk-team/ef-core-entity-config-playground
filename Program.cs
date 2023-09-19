@@ -1,3 +1,5 @@
+#pragma warning disable CA1847 // Dereference of a possibly null reference.
+
 using App;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -9,10 +11,12 @@ IConfigurationRoot builder = new ConfigurationBuilder()
     .Build();
 
 string connectionString = builder.GetConnectionString("DefaultConnection") ?? "";
-var optionsBuiler = new DbContextOptionsBuilder<AppDbContext>()
+DbContextOptionsBuilder<AppDbContext> optionsBuiler = new DbContextOptionsBuilder<AppDbContext>()
     .UseSqlServer(connectionString);
 
-optionsBuiler.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+if (builder.GetValue<bool>("LogSql")) {
+    optionsBuiler.UseLoggerFactory(LoggerFactory.Create(builder => builder.AddConsole()));
+}
 
 AppDbContext appDbContext = new(optionsBuiler.Options);
 
@@ -43,10 +47,10 @@ namespace App {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
 
-        // OnModelCreating
-        protected override void OnModelCreating(ModelBuilder builder) {
 
-            builder.Entity<Client>(p => {
+        protected override void OnModelCreating(ModelBuilder modelBuilder) {
+
+            modelBuilder.Entity<Client>(p => {
                 p.ToTable("Client");
                 p.HasKey(x => x.Id);
                 p.Property(x => x.Id).ValueGeneratedOnAdd();
@@ -54,7 +58,7 @@ namespace App {
                 p.HasIndex(x => x.Name).IsUnique();
             });
 
-            builder.Entity<Project>(p => {
+            modelBuilder.Entity<Project>(p => {
                 p.ToTable("Project");
                 p.HasKey(x => x.Id);
                 p.Property(x => x.Id).ValueGeneratedOnAdd();
